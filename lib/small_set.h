@@ -65,6 +65,9 @@ public:
 			}
 		}
 	}
+	void Clear() {
+		elements_number = 0;
+	}
 	SmallSetIterator<T, MAXSIZE> GetIterator() const {
 		return SmallSetIterator<T, MAXSIZE>(*this);
 	}

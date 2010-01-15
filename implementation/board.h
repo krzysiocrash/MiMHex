@@ -10,7 +10,7 @@ typedef unsigned short ushort;
 namespace Hex {
 
 const uint kBoardSize = 11;
-const uint kBoardSizeAligned = 13;	// kBoardSize + 2
+const uint kBoardSizeAligned = 15;	// kBoardSize + 4
 
 // -----------------------------------------------------------------------------
 
@@ -102,6 +102,7 @@ class Board {
   uint MakeUnion(uint pos1, uint pos2);
   uint Find(uint pos);
   uint ConstFind(uint pos) const;
+  void UpdateBridges(uint pos);
 
  private:
   static const uint table_size;

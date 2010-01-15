@@ -59,14 +59,14 @@ inline uint Location::GetPos() const { return _pos; }
 
 inline std::string Location::ToCoords() const {
 	std::stringstream coords;
-	coords << static_cast<char>(_pos % kBoardSizeAligned + 'a' - 1);
-	coords << _pos / kBoardSizeAligned;
+	coords << static_cast<char>(_pos % kBoardSizeAligned + 'a' - 2);
+	coords << _pos / kBoardSizeAligned - 1;
 	return coords.str();
 }
 
 inline uint Location::ToTablePos(uint x, uint y) {
 	ASSERT (ValidLocation(x, y));
-	return y * (kBoardSizeAligned) + x;
+	return (++y) * (kBoardSizeAligned) + x + 1;
 }
 
 inline bool Location::operator==(Location loc) const {
@@ -98,8 +98,8 @@ inline bool Location::ValidLocation(uint x, uint y) {
 }
 
 inline void Location::ToCoords(uint pos, uint& x, uint& y) {
-	x = pos % kBoardSizeAligned;
-	y = pos / kBoardSizeAligned;
+	x = pos % kBoardSizeAligned - 1;
+	y = pos / kBoardSizeAligned - 1;
 }
 
 // -----------------------------------------------------------------------------
@@ -115,7 +115,7 @@ inline Player Move::GetPlayer() const { return _player; }
 
 // -----------------------------------------------------------------------------
 
-const uint Board::guarded_board_size = kBoardSize + 2;
+const uint Board::guarded_board_size = kBoardSize + 4;
 const uint Board::table_size = kBoardSizeAligned * kBoardSizeAligned;
 
 const Board Board::Empty() {
@@ -123,8 +123,8 @@ const Board Board::Empty() {
 	Board board;
 
 	uint counter = 0;
-	for (uint i = 1; i <= kBoardSize; ++i) {
-		for (uint j = 1; j <= kBoardSize; ++j) {
+	for (uint i = 2; i <= kBoardSize + 1; ++i) {
+		for (uint j = 2; j <= kBoardSize + 1; ++j) {
 			uint field = i * kBoardSizeAligned + j;
 			board._fast_field_map[counter] = field;
 			board._reverse_fast_field_map[field] = counter++;
@@ -133,11 +133,16 @@ const Board Board::Empty() {
 
 	for (uint i = 0; i < table_size; ++i)
 		board._board[i] = 0;
-	for (uint i = 1; i <= kBoardSize; ++i)
-		board._board[i] = 1;
-	for (uint i = (guarded_board_size - 1) * kBoardSizeAligned + 1;
-			i < (guarded_board_size - 1) * (kBoardSizeAligned + 1); ++i) {
-		board._board[i] = (guarded_board_size - 1) * kBoardSizeAligned + 1;
+	for (uint i = 2; i <= kBoardSize + 1; ++i)
+		board._board[i + kBoardSizeAligned] = 2 + kBoardSizeAligned;
+	for (uint i = (guarded_board_size - 2) * kBoardSizeAligned + 2;
+			i < (guarded_board_size - 2) * (kBoardSizeAligned + 1); ++i) {
+		board._board[i] = (guarded_board_size - 2) * kBoardSizeAligned + 2;
+	}
+	for (uint i = 2 * kBoardSizeAligned + 1, j = 0; j < guarded_board_size - 4;
+			i += kBoardSizeAligned, j++) {
+		board._board[i] = -1;
+		board._board[i + kBoardSize + 1] = -1;
 	}
 
 	for (uint i = 0; i < table_size; ++i)
@@ -168,6 +173,7 @@ inline void Board::PlayLegal (const Move& move) {
 	uint replace_pos = _fast_field_map[--_moves_left];
 	_fast_field_map[fast_map_pos] = replace_pos;
 	_reverse_fast_field_map[replace_pos] = fast_map_pos;
+	UpdateBridges(pos);
 	_current = _current.Opponent();
 }
 
@@ -201,8 +207,8 @@ inline bool Board::IsFull() const {
 }
 
 inline Player Board::Winner() const {
-	if (ConstFind(1) ==
-		ConstFind((guarded_board_size - 1) * kBoardSizeAligned + 1)) {
+	if (ConstFind(kBoardSizeAligned + 2) ==
+		ConstFind((guarded_board_size - 2) * kBoardSizeAligned + 2)) {
 			return Player::First();
 	}
 	else return Player::Second();
@@ -225,20 +231,33 @@ inline void Board::GetPossiblePositions(Board::ushort_ptr& locations) {
 	locations = _fast_field_map;
 }
 
+void Board::UpdateBridges(uint pos) {
+	_field_bridge_connections[pos].Clear();
+	_is_bridge[pos] = false;
+	_field_bridge_connections[pos + 1].Remove(pos);
+	_field_bridge_connections[pos - 1].Remove(pos);
+	_field_bridge_connections[pos - kBoardSizeAligned].Remove(pos);
+	_field_bridge_connections[pos - kBoardSizeAligned + 1].Remove(pos);
+	_field_bridge_connections[pos + kBoardSizeAligned].Remove(pos);
+	_field_bridge_connections[pos + kBoardSizeAligned - 1].Remove(pos);
+	//short val = _board[pos];
+}
+
 std::string Board::ToAsciiArt(Location last_move) const {
 
 	std::stringstream s;
+
 	for (unsigned char x = 'a'; x < 'a' + kBoardSize; ++x)
 		s << " " << x;
 	s << std::endl;
-	for (uint i = 1; i <= kBoardSize; ++i) {
-		for (uint j = 1; j < (i < 10 ? i : i - 1); ++j)
+	for (uint i = 2; i <= kBoardSize + 1; ++i) {
+		for (uint j = 2; j < (i <= 10 ? i : i - 1); ++j)
 			s << " ";
-		s << i;
+		s << i - 1;
 		if (i * kBoardSizeAligned + 1 == last_move.GetPos())
 			s << "(";
 		else s << " ";
-		for (uint j = 1; j <= kBoardSize; ++j) {
+		for (uint j = 2; j <= kBoardSize + 1; ++j) {
 			uint pos = i * kBoardSizeAligned + j;
 			if (_board[pos] == 0)
 				s << ".";
@@ -251,7 +270,7 @@ std::string Board::ToAsciiArt(Location last_move) const {
 				s << "(";
 			else s << " ";
 		}
-		s << i << std::endl;
+		s << i - 1 << std::endl;
 	}
 	for (uint j = 0; j <= kBoardSize; ++j)
 		s << " ";
