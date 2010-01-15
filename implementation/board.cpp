@@ -124,14 +124,14 @@ const Board Board::Empty() {
 
 	uint counter = 0;
 	for (uint i = 1; i <= kBoardSize; ++i) {
-		for (uint j = 1; j <= kBoardSize; j++) {
+		for (uint j = 1; j <= kBoardSize; ++j) {
 			uint field = i * kBoardSizeAligned + j;
 			board._fast_field_map[counter] = field;
 			board._reverse_fast_field_map[field] = counter++;
 		}
 	}
 
-	for (uint i = 0; i < table_size; i++)
+	for (uint i = 0; i < table_size; ++i)
 		board._board[i] = 0;
 	for (uint i = 1; i <= kBoardSize; ++i)
 		board._board[i] = 1;
@@ -139,6 +139,9 @@ const Board Board::Empty() {
 			i < (guarded_board_size - 1) * (kBoardSizeAligned + 1); ++i) {
 		board._board[i] = (guarded_board_size - 1) * kBoardSizeAligned + 1;
 	}
+
+	for (uint i = 0; i < table_size; ++i)
+		board._is_bridge[i] = false;
 
 	return board;
 }

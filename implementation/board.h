@@ -2,8 +2,10 @@
 #define HEX_BOARD_H_
 
 #include <string>
+#include "small_set.h"
 
 typedef unsigned int uint;
+typedef unsigned short ushort;
 
 namespace Hex {
 
@@ -81,7 +83,7 @@ class Board {
  public:
   const static Board Empty();
 
-  typedef unsigned short* ushort_ptr;
+  typedef ushort* ushort_ptr;
 
   Board();
   Player CurrentPlayer() const;
@@ -105,8 +107,10 @@ class Board {
   static const uint table_size;
   static const uint guarded_board_size;
   short _board[kBoardSizeAligned * kBoardSizeAligned];
-  unsigned short _fast_field_map[kBoardSizeAligned * kBoardSizeAligned];
-  unsigned short _reverse_fast_field_map[kBoardSizeAligned * kBoardSizeAligned];
+  ushort _fast_field_map[kBoardSizeAligned * kBoardSizeAligned];
+  ushort _reverse_fast_field_map[kBoardSizeAligned * kBoardSizeAligned];
+  SmallSet<ushort> _field_bridge_connections[kBoardSizeAligned * kBoardSizeAligned];
+  bool _is_bridge[kBoardSizeAligned * kBoardSizeAligned];
   uint _moves_left;
   Player _current;
 };
