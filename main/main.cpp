@@ -6,12 +6,10 @@
 #include "mcts_node.cpp"
 #include "mcts_tree.cpp"
 #include "game.cpp"
-#include "protocol.h"
 #include "protocol.cpp"
 #include "params.h"
 
 #include <iostream>
-#include <cstdlib>
 #include <boost/lexical_cast.hpp>
 
 int main(int argc, char* argv[]) {

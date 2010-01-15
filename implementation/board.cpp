@@ -1,11 +1,10 @@
 #include "board.h"
+#include "random.h"
 #include "conditional_assert.h"
 #include <cstring>
 #include <sstream>
 
 namespace Hex {
-
-uint Rand::_seed;
 
 // -----------------------------------------------------------------------------
 
