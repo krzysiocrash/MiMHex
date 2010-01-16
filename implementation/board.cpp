@@ -4,6 +4,8 @@
 #include <cstring>
 #include <sstream>
 
+#include <iostream>
+
 namespace Hex {
 
 // -----------------------------------------------------------------------------
@@ -123,6 +125,8 @@ const Board Board::Empty() {
 	Board board;
 
 	uint counter = 0;
+	for (uint i = 0; i < table_size; ++i)
+		board._reverse_fast_field_map[i] = -1;
 	for (uint i = 2; i <= kBoardSize + 1; ++i) {
 		for (uint j = 2; j <= kBoardSize + 1; ++j) {
 			uint field = i * kBoardSizeAligned + j;
@@ -145,9 +149,6 @@ const Board Board::Empty() {
 		board._board[i + kBoardSize + 1] = -1;
 	}
 
-	for (uint i = 0; i < table_size; ++i)
-		board._is_bridge[i] = false;
-
 	return board;
 }
 
@@ -156,8 +157,9 @@ inline Player Board::CurrentPlayer() const {
 }
 
 Move Board::RandomLegalMove (const Player& player) const {
-	return Move(player,
-			Location(_fast_field_map[Rand::next_rand(_moves_left)]));
+	uint rnd = Rand::next_rand((_field_map_bound + 1) * 16 + _moves_left - _field_map_bound - 1);
+	uint result = (rnd > static_cast<unsigned>(_field_map_bound + 1) * 16) ? (rnd - (_field_map_bound + 1) * 15) : (rnd / 16);
+	return Move(player, _fast_field_map[result]);
 }
 
 inline void Board::PlayLegal (const Move& move) {
@@ -173,6 +175,10 @@ inline void Board::PlayLegal (const Move& move) {
 	uint replace_pos = _fast_field_map[--_moves_left];
 	_fast_field_map[fast_map_pos] = replace_pos;
 	_reverse_fast_field_map[replace_pos] = fast_map_pos;
+	_reverse_fast_field_map[pos] = _moves_left;
+	if (_field_map_bound >= static_cast<int>(_moves_left))
+		_field_map_bound--;
+	UpdateBridgeBound(replace_pos);
 	UpdateBridges(pos);
 	_current = _current.Opponent();
 }
@@ -219,7 +225,7 @@ inline void Board::Load (const Board& board) {
 }
 
 inline Board::Board() : _moves_left(kBoardSize * kBoardSize),
-		_current(Player::First()) {
+		_field_map_bound(kBoardSize * kBoardSize - 1), _current(Player::First()) {
 	Rand::init(time(NULL));
 }
 
@@ -233,14 +239,86 @@ inline void Board::GetPossiblePositions(Board::ushort_ptr& locations) {
 
 void Board::UpdateBridges(uint pos) {
 	_field_bridge_connections[pos].Clear();
-	_is_bridge[pos] = false;
 	_field_bridge_connections[pos + 1].Remove(pos);
 	_field_bridge_connections[pos - 1].Remove(pos);
 	_field_bridge_connections[pos - kBoardSizeAligned].Remove(pos);
 	_field_bridge_connections[pos - kBoardSizeAligned + 1].Remove(pos);
 	_field_bridge_connections[pos + kBoardSizeAligned].Remove(pos);
 	_field_bridge_connections[pos + kBoardSizeAligned - 1].Remove(pos);
-	//short val = _board[pos];
+	short val = _board[pos];
+
+	short second = _board[pos - 2 * kBoardSizeAligned + 1];
+	if (second != 0 && (second >> sizeof(short)) == (val >> sizeof(short))
+			&& _board[pos - kBoardSizeAligned] == 0 &&
+			_board[pos - kBoardSizeAligned + 1] == 0) {
+		_field_bridge_connections[pos - kBoardSizeAligned].Insert(
+				pos - kBoardSizeAligned + 1);
+		_field_bridge_connections[pos - kBoardSizeAligned + 1].Insert(
+				pos - kBoardSizeAligned);
+	}
+	second = _board[pos - kBoardSizeAligned + 2];
+	if (second != 0 && (second >> sizeof(short)) == (val >> sizeof(short))
+			&& _board[pos - kBoardSizeAligned + 1] == 0 && _board[pos + 1] == 0) {
+		_field_bridge_connections[pos - kBoardSizeAligned + 1].Insert(pos + 1);
+		_field_bridge_connections[pos + 1].Insert(pos - kBoardSizeAligned + 1);
+	}
+	second = _board[pos + kBoardSizeAligned + 1];
+	if (second != 0 && (second >> sizeof(short)) == (val >> sizeof(short))
+			&& _board[pos + 1] == 0 && _board[pos + kBoardSizeAligned] == 0) {
+		_field_bridge_connections[pos + 1].Insert(pos + kBoardSizeAligned);
+		_field_bridge_connections[pos + kBoardSizeAligned].Insert(pos + 1);
+	}
+	second = _board[pos + 2 * kBoardSizeAligned - 1];
+	if (second != 0 && (second >> sizeof(short)) == (val >> sizeof(short))
+			&& _board[pos + kBoardSizeAligned] == 0 &&
+			_board[pos + kBoardSizeAligned - 1] == 0) {
+		_field_bridge_connections[pos + kBoardSizeAligned].Insert(
+				pos + kBoardSizeAligned - 1);
+		_field_bridge_connections[pos + kBoardSizeAligned - 1].Insert(
+				pos + kBoardSizeAligned);
+	}
+	second = _board[pos + kBoardSizeAligned - 2];
+	if (second != 0 && (second >> sizeof(short)) == (val >> sizeof(short))
+			&& _board[pos + kBoardSizeAligned - 1] == 0 && _board[pos - 1] == 0) {
+		_field_bridge_connections[pos + kBoardSizeAligned - 1].Insert(pos - 1);
+		_field_bridge_connections[pos - 1].Insert(pos + kBoardSizeAligned - 1);
+	}
+	second = _board[pos - kBoardSizeAligned - 1];
+	if (second != 0 && (second >> sizeof(short)) == (val >> sizeof(short))
+			&& _board[pos - 1] == 0 &&
+			_board[pos - kBoardSizeAligned] == 0) {
+		_field_bridge_connections[pos - 1].Insert(pos - kBoardSizeAligned);
+		_field_bridge_connections[pos - kBoardSizeAligned].Insert(pos - 1);
+	}
+
+	UpdateBridgeBound(pos + 1);
+	UpdateBridgeBound(pos - 1);
+	UpdateBridgeBound(pos - kBoardSizeAligned);
+	UpdateBridgeBound(pos - kBoardSizeAligned + 1);
+	UpdateBridgeBound(pos + kBoardSizeAligned);
+	UpdateBridgeBound(pos + kBoardSizeAligned - 1);
+}
+
+void Board::UpdateBridgeBound(uint pos) {
+	if (_field_bridge_connections[pos].Size() > 0) {
+		if (_reverse_fast_field_map[pos] <= _field_map_bound) {
+			ushort map_pos = _reverse_fast_field_map[pos];
+			_fast_field_map[map_pos] = _fast_field_map[_field_map_bound];
+			_fast_field_map[_field_map_bound--] = pos;
+
+			_reverse_fast_field_map[pos] = _field_map_bound + 1;
+			_reverse_fast_field_map[_fast_field_map[map_pos]] = map_pos;
+		}
+	} else if (_reverse_fast_field_map[pos] < _moves_left) {
+		if (_reverse_fast_field_map[pos] > _field_map_bound) {
+			ushort map_pos = _reverse_fast_field_map[pos];
+			_fast_field_map[map_pos] = _fast_field_map[++_field_map_bound];
+			_fast_field_map[_field_map_bound] = pos;
+
+			_reverse_fast_field_map[pos] = _field_map_bound;
+			_reverse_fast_field_map[_fast_field_map[map_pos]] = map_pos;
+		}
+	}
 }
 
 std::string Board::ToAsciiArt(Location last_move) const {

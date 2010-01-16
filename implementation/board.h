@@ -10,7 +10,7 @@ typedef unsigned short ushort;
 namespace Hex {
 
 const uint kBoardSize = 11;
-const uint kBoardSizeAligned = 15;	// kBoardSize + 4
+const uint kBoardSizeAligned = 16;	// kBoardSize aligned to nearest higher power of 2
 
 // -----------------------------------------------------------------------------
 
@@ -103,6 +103,7 @@ class Board {
   uint Find(uint pos);
   uint ConstFind(uint pos) const;
   void UpdateBridges(uint pos);
+  void UpdateBridgeBound(uint pos);
 
  private:
   static const uint table_size;
@@ -111,8 +112,8 @@ class Board {
   ushort _fast_field_map[kBoardSizeAligned * kBoardSizeAligned];
   ushort _reverse_fast_field_map[kBoardSizeAligned * kBoardSizeAligned];
   SmallSet<ushort> _field_bridge_connections[kBoardSizeAligned * kBoardSizeAligned];
-  bool _is_bridge[kBoardSizeAligned * kBoardSizeAligned];
   uint _moves_left;
+  int _field_map_bound;
   Player _current;
 };
 

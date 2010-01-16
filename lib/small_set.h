@@ -71,6 +71,9 @@ public:
 	SmallSetIterator<T, MAXSIZE> GetIterator() const {
 		return SmallSetIterator<T, MAXSIZE>(*this);
 	}
+	unsigned Size() const {
+		return elements_number;
+	}
 
 private:
 	unsigned short elements_number;
