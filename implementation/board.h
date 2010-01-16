@@ -88,7 +88,9 @@ class Board {
   Board();
   Player CurrentPlayer() const;
   Move RandomLegalMove (const Player&) const;
+  Move RandomLegalMoveIgnoreBridges (const Player&) const;
   void PlayLegal (const Move&);
+  void PlayLegalIgnoreBridges (const Move&);
   bool IsFull() const;
   Player Winner() const;
   void Load (const Board&);

@@ -158,8 +158,15 @@ inline Player Board::CurrentPlayer() const {
 
 Move Board::RandomLegalMove (const Player& player) const {
 	uint rnd = Rand::next_rand((_field_map_bound + 1) * 16 + _moves_left - _field_map_bound - 1);
-	uint result = (rnd > static_cast<unsigned>(_field_map_bound + 1) * 16) ? (rnd - (_field_map_bound + 1) * 15) : (rnd / 16);
+	uint result;
+	if (rnd > static_cast<unsigned>(_field_map_bound + 1) * 16)
+		result = rnd - (_field_map_bound + 1) * 15;
+	else result = rnd / 16;
 	return Move(player, _fast_field_map[result]);
+}
+
+Move Board::RandomLegalMoveIgnoreBridges (const Player& player) const {
+	return Move(player, _fast_field_map[Rand::next_rand(_moves_left)]);
 }
 
 inline void Board::PlayLegal (const Move& move) {
@@ -178,8 +185,24 @@ inline void Board::PlayLegal (const Move& move) {
 	_reverse_fast_field_map[pos] = _moves_left;
 	if (_field_map_bound >= static_cast<int>(_moves_left))
 		_field_map_bound--;
+	_current = _current.Opponent();
 	UpdateBridgeBound(replace_pos);
 	UpdateBridges(pos);
+}
+
+inline void Board::PlayLegalIgnoreBridges (const Move& move) {
+	ASSERT(IsValidMove(move));
+	uint pos = move.GetLocation().GetPos();
+	if (move.GetPlayer() == Player::First()) {
+		_board[pos] = pos;
+		MakeUnion(pos);
+	} else {
+		_board[pos] = -1;
+	}
+	uint fast_map_pos = _reverse_fast_field_map[pos];
+	uint replace_pos = _fast_field_map[--_moves_left];
+	_fast_field_map[fast_map_pos] = replace_pos;
+	_reverse_fast_field_map[replace_pos] = fast_map_pos;
 	_current = _current.Opponent();
 }
 
