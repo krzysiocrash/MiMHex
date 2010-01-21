@@ -4,7 +4,7 @@
 #include <cstring>
 #include <sstream>
 
-#include <iostream>
+#define SHORT_BIT_SIZE (sizeof(short) * 8)
 
 namespace Hex {
 
@@ -157,11 +157,16 @@ inline Player Board::CurrentPlayer() const {
 }
 
 Move Board::RandomLegalMove (const Player& player) const {
-	uint rnd = Rand::next_rand((_field_map_bound + 1) * 16 + _moves_left - _field_map_bound - 1);
+
+	// _field_map_bound - last not-bridge
+	// (_field_map_bound + 1) - first field after not-bridge fields == count of not-bridges
+	// (_moves_left - _field_map_bound - 1) - bridges count
+
+	uint rnd = Rand::next_rand((_field_map_bound + 1) * 128 + _moves_left - _field_map_bound - 1);
 	uint result;
-	if (rnd > static_cast<unsigned>(_field_map_bound + 1) * 16)
-		result = rnd - (_field_map_bound + 1) * 15;
-	else result = rnd / 16;
+	if (rnd >= static_cast<unsigned>(_field_map_bound + 1) * 128)
+		result = rnd - (_field_map_bound + 1) * (128 - 1);
+	else result = rnd / 128;
 	return Move(player, _fast_field_map[result]);
 }
 
@@ -271,7 +276,7 @@ void Board::UpdateBridges(uint pos) {
 	short val = _board[pos];
 
 	short second = _board[pos - 2 * kBoardSizeAligned + 1];
-	if (second != 0 && (second >> sizeof(short)) == (val >> sizeof(short))
+	if (second != 0 && (second >> SHORT_BIT_SIZE) == (val >> SHORT_BIT_SIZE)
 			&& _board[pos - kBoardSizeAligned] == 0 &&
 			_board[pos - kBoardSizeAligned + 1] == 0) {
 		_field_bridge_connections[pos - kBoardSizeAligned].Insert(
@@ -280,19 +285,19 @@ void Board::UpdateBridges(uint pos) {
 				pos - kBoardSizeAligned);
 	}
 	second = _board[pos - kBoardSizeAligned + 2];
-	if (second != 0 && (second >> sizeof(short)) == (val >> sizeof(short))
+	if (second != 0 && (second >> SHORT_BIT_SIZE) == (val >> SHORT_BIT_SIZE)
 			&& _board[pos - kBoardSizeAligned + 1] == 0 && _board[pos + 1] == 0) {
 		_field_bridge_connections[pos - kBoardSizeAligned + 1].Insert(pos + 1);
 		_field_bridge_connections[pos + 1].Insert(pos - kBoardSizeAligned + 1);
 	}
 	second = _board[pos + kBoardSizeAligned + 1];
-	if (second != 0 && (second >> sizeof(short)) == (val >> sizeof(short))
+	if (second != 0 && (second >> SHORT_BIT_SIZE) == (val >> SHORT_BIT_SIZE)
 			&& _board[pos + 1] == 0 && _board[pos + kBoardSizeAligned] == 0) {
 		_field_bridge_connections[pos + 1].Insert(pos + kBoardSizeAligned);
 		_field_bridge_connections[pos + kBoardSizeAligned].Insert(pos + 1);
 	}
 	second = _board[pos + 2 * kBoardSizeAligned - 1];
-	if (second != 0 && (second >> sizeof(short)) == (val >> sizeof(short))
+	if (second != 0 && (second >> SHORT_BIT_SIZE) == (val >> SHORT_BIT_SIZE)
 			&& _board[pos + kBoardSizeAligned] == 0 &&
 			_board[pos + kBoardSizeAligned - 1] == 0) {
 		_field_bridge_connections[pos + kBoardSizeAligned].Insert(
@@ -301,13 +306,13 @@ void Board::UpdateBridges(uint pos) {
 				pos + kBoardSizeAligned);
 	}
 	second = _board[pos + kBoardSizeAligned - 2];
-	if (second != 0 && (second >> sizeof(short)) == (val >> sizeof(short))
+	if (second != 0 && (second >> SHORT_BIT_SIZE) == (val >> SHORT_BIT_SIZE)
 			&& _board[pos + kBoardSizeAligned - 1] == 0 && _board[pos - 1] == 0) {
 		_field_bridge_connections[pos + kBoardSizeAligned - 1].Insert(pos - 1);
 		_field_bridge_connections[pos - 1].Insert(pos + kBoardSizeAligned - 1);
 	}
 	second = _board[pos - kBoardSizeAligned - 1];
-	if (second != 0 && (second >> sizeof(short)) == (val >> sizeof(short))
+	if (second != 0 && (second >> SHORT_BIT_SIZE) == (val >> SHORT_BIT_SIZE)
 			&& _board[pos - 1] == 0 &&
 			_board[pos - kBoardSizeAligned] == 0) {
 		_field_bridge_connections[pos - 1].Insert(pos - kBoardSizeAligned);
@@ -377,6 +382,10 @@ std::string Board::ToAsciiArt(Location last_move) const {
 		s << " ";
 	for (unsigned char x = 'a'; x < 'a' + kBoardSize; ++x)
 		s << " " << x;
+
+	s << std::endl << "Bridges:";
+	for (unsigned i = static_cast<unsigned>(_field_map_bound + 1); i < _moves_left; i++)
+		s << " " << Location(_fast_field_map[i]).ToCoords();
 
 	return s.str();
 }

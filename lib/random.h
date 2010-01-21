@@ -1,6 +1,8 @@
 #ifndef RANDOM_H_
 #define RANDOM_H_
 
+#include "conditional_assert.h"
+
 class Rand {
 public:
 	static void init (unsigned seed) { _seed = seed; }
@@ -12,6 +14,7 @@ public:
 		return _seed = (lo & 0x7FFFFFFF) + (lo >> 31);
 	}
 	static unsigned next_rand(unsigned n) {
+	  ASSERT(n < 0xffff);
 	  return ((next_rand() & 0xffff) * n) >> 16;
 	}
 private:

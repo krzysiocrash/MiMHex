@@ -52,10 +52,10 @@ class Location {
   static bool ValidLocation(uint x, uint y);
   static bool ValidPosition(uint pos);
   static void ToCoords(uint pos, uint& x, uint& y);
+  static uint ToTablePos(uint x, uint y);
 
  private:
   Location();
-  static uint ToTablePos(uint x, uint y);
 
  private:
   uint _pos;
